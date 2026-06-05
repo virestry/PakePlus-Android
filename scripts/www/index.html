@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>美食大转盘 | 幸运摇奖机</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(145deg, #2b1a0e 0%, #4a2a18 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', 'Poppins', 'Noto Sans CJK SC', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* 主容器 */
+        .wheel-container {
+            max-width: 580px;
+            width: 100%;
+            background: rgba(255, 245, 235, 0.95);
+            border-radius: 68px;
+            box-shadow: 0 30px 45px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+            backdrop-filter: blur(2px);
+            transition: all 0.2s;
+        }
+
+        /* 头部 */
+        .header {
+            background: linear-gradient(135deg, #ffb347, #ff7e05);
+            padding: 20px 16px 16px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 1.9rem;
+            font-weight: 800;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header h1 span {
+            font-size: 2rem;
+        }
+
+        .sub {
+            background: rgba(255,255,200,0.25);
+            display: inline-block;
+            padding: 4px 18px;
+            border-radius: 40px;
+            color: #fff0d0;
+            font-size: 0.75rem;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        /* 转盘主体 */
+        .wheel-area {
+            padding: 30px 20px 15px;
+            background: #fffaf2;
+        }
+
+        .wheel-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            margin: 0 auto;
+            max-width: 380px;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: 50%;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.3), 0 0 0 8px #ffddb0, 0 0 0 12px #ffb56b;
+            transition: box-shadow 0.2s;
+        }
+
+        /* 指针 */
+        .pointer {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 28px solid transparent;
+            border-right: 28px solid transparent;
+            border-top: 65px solid #ffd966;
+            filter: drop-shadow(0 6px 6px rgba(0,0,0,0.3));
+            z-index: 15;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+
+        .pointer::after {
+            content: "⭐";
+            position: absolute;
+            top: -58px;
+            left: -15px;
+            font-size: 28px;
+            color: #ffec80;
+            text-shadow: 0 0 3px gold;
+        }
+
+        /* 抽奖按钮 替代canvas点击，加独立按钮更友好 */
+        .spin-btn {
+            background: radial-gradient(circle at 30% 20%, #ff8c42, #e05a1a);
+            border: none;
+            width: 75%;
+            margin: 20px auto 10px;
+            display: block;
+            padding: 14px 0;
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: white;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: 0.1s linear;
+            box-shadow: 0 8px 0 #962d00;
+            font-family: inherit;
+            letter-spacing: 4px;
+        }
+
+        .spin-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 #962d00;
+        }
+
+        .spin-btn.disabled {
+            opacity: 0.6;
+            transform: translateY(0);
+            pointer-events: none;
+        }
+
+        /* 中奖结果展示 */
+        .result-card {
+            background: #ffefdf;
+            border-radius: 48px;
+            margin: 10px 20px 20px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: inset 0 1px 3px #fff3e6, 0 8px 18px rgba(0,0,0,0.1);
+        }
+
+        .result-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #c2682a;
+            letter-spacing: 2px;
+        }
+
+        .result-dish {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin: 6px 0;
+            color: #d45a1c;
+            background: linear-gradient(125deg, #c14200, #f07c32);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .result-emoji-big {
+            font-size: 3rem;
+        }
+
+        /* 美食管理区域 */
+        .manage-panel {
+            background: #fff8f0;
+            margin: 8px 16px 16px;
+            border-radius: 60px;
+            padding: 12px 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .manage-panel input {
+            flex: 2;
+            background: white;
+            border: 1px solid #ffcfaa;
+            padding: 12px 16px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .manage-panel input:focus {
+            border-color: #ff9045;
+            box-shadow: 0 0 0 2px #ffcf9a;
+        }
+
+        .add-btn {
+            background: #ff8f48;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: 0.1s;
+            font-size: 0.85rem;
+        }
+
+        .action-group {
+            display: flex;
+            gap: 12px;
+            padding: 0 16px 25px;
+            flex-wrap: wrap;
+        }
+
+        .sec-btn {
+            background: #fff4e8;
+            border: 1px solid #ffdbb5;
+            padding: 10px 12px;
+            border-radius: 50px;
+            font-weight: 600;
+            color: #bb632b;
+            font-size: 0.8rem;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .sec-btn:active {
+            background: #ffe0c2;
+            transform: scale(0.97);
+        }
+
+        footer {
+            font-size: 0.65rem;
+            text-align: center;
+            padding: 12px;
+            background: #fff5ea;
+            color: #b6622b;
+            border-top: 1px solid #ffe0c2;
+        }
+
+        @keyframes bounceWin {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            80% { transform: scale(1.05);}
+            100% { transform: scale(1);}
+        }
+
+        .win-animation {
+            animation: bounceWin 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+<div class="wheel-container">
+    <div class="header">
+        <h1><span>🎡</span> 美食大转盘 <span>🍣</span></h1>
+        <div class="sub">✨ 指针旋转 · 美味天降 ✨</div>
+    </div>
+
+    <div class="wheel-area">
+        <div class="wheel-wrapper">
+            <canvas id="wheelCanvas" width="600" height="600"></canvas>
+            <div class="pointer" id="pointerBtn"></div>
+        </div>
+        <button id="spinWheelBtn" class="spin-btn">🌀 转 动 美 食 盘 🍥</button>
+    </div>
+
+    <div class="result-card" id="resultCard">
+        <div class="result-label">🏆 今日天选美食 🏆</div>
+        <div class="result-dish" id="resultDishName">旋转转盘试试</div>
+        <div class="result-emoji-big" id="resultDishEmoji">🎲</div>
+    </div>
+
+    <!-- 管理：添加自定义美食 -->
+    <div class="manage-panel">
+        <input type="text" id="newFoodName" placeholder="美食名称, 例: 佛跳墙" maxlength="20">
+        <input type="text" id="newFoodEmoji" placeholder="表情 (默认🍲)" maxlength="6">
+        <button id="addFoodItemBtn" class="add-btn">➕ 添加</button>
+    </div>
+
+    <div class="action-group">
+        <button id="resetDefaultBtn" class="sec-btn">🍱 重置经典菜单</button>
+        <button id="removeLastBtn" class="sec-btn">✖️ 删除最后一项</button>
+        <button id="clearAllBtn" class="sec-btn">🗑️ 清空全部</button>
+    </div>
+    <footer>点击转盘或按钮 · 指针指向美食即为中奖</footer>
+</div>
+
+<script>
+    (function(){
+        // ---------- 经典美食库 ----------
+        const DEFAULT_FOODS = [
+            { name: "重庆火锅", emoji: "🥘" },
+            { name: "北京烤鸭", emoji: "🦆" },
+            { name: "日式拉面", emoji: "🍜" },
+            { name: "意式披萨", emoji: "🍕" },
+            { name: "芒果糯米饭", emoji: "🥭🍚" },
+            { name: "麻辣烫", emoji: "🍲" },
+            { name: "糖醋里脊", emoji: "🥩" },
+            { name: "抹茶千层", emoji: "🍰" },
+            { name: "杨枝甘露", emoji: "🥭🍧" },
+            { name: "生煎包", emoji: "🥟" }
+        ];
+
+        let currentFoods = [];          // 存储美食列表
+        let segments = [];               // 存储弧度信息
+        let currentRotation = 0;        // 当前转盘旋转弧度
+        let isSpinning = false;
+        let animFrame = null;
+        let spinStartTime = 0;
+        let spinDuration = 1800;         // 毫秒
+        let targetRotation = 0;
+        let finalSegmentIndex = -1;
+        
+        // DOM 元素
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spinWheelBtn');
+        const pointerDiv = document.getElementById('pointerBtn');
+        const resultNameSpan = document.getElementById('resultDishName');
+        const resultEmojiSpan = document.getElementById('resultDishEmoji');
+        const newFoodNameInput = document.getElementById('newFoodName');
+        const newFoodEmojiInput = document.getElementById('newFoodEmoji');
+        const addFoodBtn = document.getElementById('addFoodItemBtn');
+        const resetDefaultBtn = document.getElementById('resetDefaultBtn');
+        const removeLastBtn = document.getElementById('removeLastBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const resultCardDiv = document.getElementById('resultCard');
+
+        // 颜色池 (明亮美食风)
+        const colorPalette = [
+            '#F9A26C', '#F6B17A', '#FCCB8F', '#FDD692', '#FFB77C', '#F4A261', '#E9C46A', '#F4D58C', '#FFAD6A', '#F29455',
+            '#FF9F6E', '#FEBA7A', '#FFC68E', '#FFB281', '#FAA275', '#FDAC7A', '#FFB96E', '#FC9E60'
+        ];
+
+        // 保存数据到localStorage
+        function persistMenu() {
+            localStorage.setItem('wheel_gourmet_foods', JSON.stringify(currentFoods));
+        }
+
+        function loadMenuFromStore() {
+            const stored = localStorage.getItem('wheel_gourmet_foods');
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        currentFoods = parsed;
+                        return true;
+                    }
+                } catch(e) {}
+            }
+            return false;
+        }
+
+        // 初始化/重置菜单
+        function initMenu() {
+            const hasStore = loadMenuFromStore();
+            if (!hasStore) {
+                currentFoods = DEFAULT_FOODS.map(item => ({ ...item }));
+                persistMenu();
+            }
+            buildSegments();
+            drawWheel();
+            // 默认不显示抽奖结果，清空展示
+            if (currentFoods.length > 0) {
+                resultNameSpan.innerText = "等待旋转";
+                resultEmojiSpan.innerText = "🍀";
+            } else {
+                resultNameSpan.innerText = "暂无美食";
+                resultEmojiSpan.innerText = "😭";
+            }
+        }
+
+        // 根据 currentFoods 构建 segments 数组 (每个扇区弧度范围)
+        function buildSegments() {
+            const count = currentFoods.length;
+            if (count === 0) {
+                segments = [];
+                return;
+            }
+            const angleStep = (Math.PI * 2) / count;
+            segments = [];
+            for (let i = 0; i < count; i++) {
+                const start = i * angleStep;
+                const end = (i + 1) * angleStep;
+                segments.push({
+                    index: i,
+                    name: currentFoods[i].name,
+                    emoji: currentFoods[i].emoji || '🍽️',
+                    startAngle: start,
+                    endAngle: end,
+                    color: colorPalette[i % colorPalette.length]
+                });
+            }
+        }
+
+        // 绘制转盘 (根据 currentRotation)
+        function drawWheel() {
+            if (!ctx) return;
+            const size = canvas.width;
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size * 0.45;  // 留白边缘
+
+            ctx.clearRect(0, 0, size, size);
+            if (segments.length === 0) {
+                ctx.font = "bold 22px 'Segoe UI'";
+                ctx.fillStyle = "#a6531e";
+                ctx.textAlign = "center";
+                ctx.fillText("暂无美食", centerX, centerY);
+                return;
+            }
+
+            const angleStep = (Math.PI * 2) / segments.length;
+            for (let i = 0; i < segments.length; i++) {
+                const seg = segments[i];
+                const start = seg.startAngle + currentRotation;
+                const end = seg.endAngle + currentRotation;
+                // 绘制扇形
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, start, end);
+                ctx.closePath();
+                ctx.fillStyle = seg.color;
+                ctx.fill();
+                ctx.save();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = "#fff7e8";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                // 绘制文字与emoji (在扇形中间)
+                const midAngle = start + (angleStep / 2);
+                const textRadius = radius * 0.65;
+                const x = centerX + Math.cos(midAngle) * textRadius;
+                const y = centerY + Math.sin(midAngle) * textRadius;
+                
+                const fontSize = Math.max(12, Math.min(18, radius * 0.12));
+                ctx.font = `${fontSize}px "Segoe UI", "Poppins"`;
+                ctx.fillStyle = "#2e241e";
+                ctx.shadowBlur = 0;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                
+                let displayText = seg.name;
+                if (displayText.length > 8) displayText = displayText.slice(0,6)+"..";
+                ctx.fillText(displayText, x, y-8);
+                ctx.font = `${fontSize+4}px "Segoe UI Emoji"`;
+                ctx.fillText(seg.emoji, x, y+12);
+            }
+            
+            // 绘制中心小圆点装饰
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 0.12, 0, 2*Math.PI);
+            ctx.fillStyle = "#ffdc97";
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 0.07, 0, 2*Math.PI);
+            ctx.fillStyle = "#ff9f4a";
+            ctx.fill();
+        }
+
+        // 根据当前旋转角度，获取指针正上方 (12点钟方向 对应 -PI/2) 的扇区索引
+        function getCurrentSegmentIndex() {
+            if (segments.length === 0) return -1;
+            // 指针方向为向上 (角度 -PI/2) 或者说 指针固定方向: canvas中 12点钟方向为 -PI/2
+            // 指针方向相对于转盘的角度 = 固定参考方向 - 当前旋转弧度
+            const pointerAngle = -Math.PI / 2;   // 向上
+            // 实际命中转盘上的某扇区：我们需要找到包含 pointerAngle 对应的世界扇区（考虑旋转）
+            // 扇区边界是 start+rot , end+rot 。 求使pointerAngle落在区间内的扇区
+            for (let i = 0; i < segments.length; i++) {
+                let start = segments[i].startAngle + currentRotation;
+                let end = segments[i].endAngle + currentRotation;
+                // 处理跨越0的情况
+                if (start < 0) start += Math.PI*2;
+                if (end < 0) end += Math.PI*2;
+                let testAngle = pointerAngle;
+                if (testAngle < 0) testAngle += Math.PI*2;
+                let startNorm = start % (Math.PI*2);
+                let endNorm = end % (Math.PI*2);
+                if (startNorm < endNorm) {
+                    if (testAngle >= startNorm && testAngle < endNorm) return i;
+                } else {
+                    // 跨越 2pi
+                    if (testAngle >= startNorm || testAngle < endNorm) return i;
+                }
+            }
+            // 容错：返回0
+            return 0;
+        }
+
+        // 抽奖旋转动画
+        function startSpin() {
+            if (isSpinning) return;
+            if (segments.length === 0) {
+                // 没有美食提醒
+                resultNameSpan.innerText = "没有美食";
+                resultEmojiSpan.innerText = "🥡请添加";
+                const tip = document.createElement('div');
+                tip.innerText = '🍽️ 请先添加美食或重置菜单';
+                tip.style.cssText = 'position:fixed; bottom:30%; left:50%; transform:translateX(-50%); background:#ffefe2; padding:8px 20px; border-radius:60px; color:#c14200; font-weight:bold;z-index:1000';
+                document.body.appendChild(tip);
+                setTimeout(() => tip.remove(), 1500);
+                return;
+            }
+            
+            isSpinning = true;
+            spinBtn.classList.add('disabled');
+            spinBtn.innerText = '🎲 转盘中 ...';
+            
+            // 随机生成额外多圈增量 (5~15圈)
+            const extraRounds = 8 + Math.random() * 12;
+            const randomDelta = (Math.random() * Math.PI * 2);
+            // 目标总旋转弧度 = 当前旋转 + 额外弧度(使最终停止位置随机)
+            const baseTarget = currentRotation + (extraRounds * 2 * Math.PI) + randomDelta;
+            targetRotation = baseTarget;
+            const startRotation = currentRotation;
+            const startTime = performance.now();
+            
+            function animateSpin(now) {
+                const elapsed = now - startTime;
+                let t = Math.min(1, elapsed / spinDuration);
+                // 缓动 easeOutCubic
+                const easeOut = 1 - Math.pow(1 - t, 3);
+                currentRotation = startRotation + (targetRotation - startRotation) * easeOut;
+                // 规范化弧度 (0~2pi)
+                currentRotation = currentRotation % (Math.PI * 2);
+                drawWheel();
+                if (t < 1) {
+                    requestAnimationFrame(animateSpin);
+                } else {
+                    // 动画完成，精准归位计算最终结果
+                    currentRotation = targetRotation % (Math.PI * 2);
+                    drawWheel();
+                    const finalIdx = getCurrentSegmentIndex();
+                    if (finalIdx !== -1 && finalIdx < currentFoods.length) {
+                        const prize = currentFoods[finalIdx];
+                        resultNameSpan.innerText = prize.name;
+                        resultEmojiSpan.innerText = prize.emoji || '🏆';
+                        // 添加动画高亮效果
+                        resultCardDiv.classList.add('win-animation');
+                        setTimeout(() => resultCardDiv.classList.remove('win-animation'), 550);
+                        // 震动（可选）
+                        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                        document.title = `🎉 抽中 ${prize.name} 🎉`;
+                        setTimeout(() => { document.title = '美食大转盘 | 幸运摇奖机'; }, 2500);
+                    } else {
+                        resultNameSpan.innerText = "未命中，再试一次";
+                        resultEmojiSpan.innerText = "🌀";
+                    }
+                    isSpinning = false;
+                    spinBtn.classList.remove('disabled');
+                    spinBtn.innerText = '🌀 转 动 美 食 盘 🍥';
+                }
+            }
+            requestAnimationFrame(animateSpin);
+        }
+
+        // 重置绘制与数据
+        function refreshWheelAndRender() {
+            buildSegments();
+            drawWheel();
+            if (currentFoods.length === 0) {
+                resultNameSpan.innerText = "暂无美食";
+                resultEmojiSpan.innerText = "😭";
+            } else {
+                // 不清空结果但显示提示
+                if(resultNameSpan.innerText === "暂无美食") resultNameSpan.innerText = "等待旋转";
+                if(resultEmojiSpan.innerText === "😭") resultEmojiSpan.innerText = "🍀";
+            }
+            persistMenu();
+        }
+
+        // 添加新美食
+        function addGourmet() {
+            let name = newFoodNameInput.value.trim();
+            let emoji = newFoodEmojiInput.value.trim();
+            if (name === "") {
+                const toast = document.createElement('div');
+                toast.innerText = '🍜 请输入美食名称';
+                toast.style.cssText = 'position:fixed; bottom:25%; left:50%; transform:translateX(-50%); background:#fff1e2; padding:8px 22px; border-radius:60px; color:#b74f12; font-weight:bold; z-index:1000;';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 1200);
+                return;
+            }
+            if (name.length > 22) name = name.slice(0,22);
+            if (emoji === "") {
+                const emojis = ['🍜','🍛','🥘','🍱','🥟','🍡','🍤','🥗','🍲','🧋','🍣','🍕'];
+                emoji = emojis[Math.floor(Math.random() * emojis.length)];
+            }
+            if (emoji.length > 8) emoji = emoji.slice(0,6);
+            currentFoods.push({ name: name, emoji: emoji });
+            refreshWheelAndRender();
+            newFoodNameInput.value = '';
+            newFoodEmojiInput.value = '';
+            resultNameSpan.innerText = `➕ 加入「${name}”`;
+            resultEmojiSpan.innerText = emoji;
+            setTimeout(() => {
+                if (!isSpinning && resultNameSpan.innerText.includes(`加入「${name}”`)) {
+                    resultNameSpan.innerText = "等待旋转";
+                    resultEmojiSpan.innerText = "🍀";
+                }
+            }, 1800);
+        }
+
+        // 重置经典菜单
+        function resetClassic() {
+            if (isSpinning) return;
+            currentFoods = DEFAULT_FOODS.map(item => ({ ...item }));
+            refreshWheelAndRender();
+            resultNameSpan.innerText = "已重置经典菜单";
+            resultEmojiSpan.innerText = "🍾";
+            setTimeout(() => {
+                if (!isSpinning && resultNameSpan.innerText === "已重置经典菜单") {
+                    resultNameSpan.innerText = "等待旋转";
+                    resultEmojiSpan.innerText = "🍀";
+                }
+            }, 1500);
+        }
+
+        // 删除最后一项
+        function removeLast() {
+            if (isSpinning) return;
+            if (currentFoods.length === 0) {
+                const warn = document.createElement('div');
+                warn.innerText = '食单已空，无法删除';
+                warn.style.cssText = 'position:fixed; bottom:25%; left:50%; transform:translateX(-50%); background:#fff0e0; padding:6px 20px; border-radius:60px; color:#b45519;z-index:1000';
+                document.body.appendChild(warn);
+                setTimeout(() => warn.remove(), 1200);
+                return;
+            }
+            const removed = currentFoods.pop();
+            refreshWheelAndRender();
+            resultNameSpan.innerText = `撤走「${removed.name}”`;
+            resultEmojiSpan.innerText = "🍽️";
+            setTimeout(() => {
+                if (!isSpinning && resultNameSpan.innerText.includes("撤走")) {
+                    if(currentFoods.length===0) resultNameSpan.innerText="食盘空空";
+                    else resultNameSpan.innerText = "等待旋转";
+                    resultEmojiSpan.innerText = currentFoods.length ? "🍀" : "🍽️";
+                }
+            }, 1500);
+        }
+
+        // 清空全部
+        function clearAll() {
+            if (isSpinning) return;
+            if (currentFoods.length === 0) return;
+            currentFoods = [];
+            refreshWheelAndRender();
+            resultNameSpan.innerText = "清空食单";
+            resultEmojiSpan.innerText = "❄️";
+            setTimeout(() => {
+                if (!isSpinning && resultNameSpan.innerText === "清空食单") {
+                    resultNameSpan.innerText = "请添加美食";
+                    resultEmojiSpan.innerText = "🍴";
+                }
+            }, 1500);
+        }
+
+        // 点击指针同样触发抽奖 (人性化)
+        function bindEvents() {
+            spinBtn.addEventListener('click', startSpin);
+            pointerDiv.addEventListener('click', startSpin);
+            addFoodBtn.addEventListener('click', addGourmet);
+            resetDefaultBtn.addEventListener('click', resetClassic);
+            removeLastBtn.addEventListener('click', removeLast);
+            clearAllBtn.addEventListener('click', clearAll);
+            newFoodNameInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') addGourmet(); });
+            newFoodEmojiInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') addGourmet(); });
+        }
+
+        // 设定画布尺寸自适应
+        function resizeCanvas() {
+            const wrapper = document.querySelector('.wheel-wrapper');
+            const size = wrapper.clientWidth;
+            canvas.width = size;
+            canvas.height = size;
+            drawWheel();
+        }
+        
+        // 监听resize
+        window.addEventListener('resize', () => { resizeCanvas(); drawWheel(); });
+        
+        // 初始化
+        initMenu();
+        resizeCanvas();
+        bindEvents();
+    })();
+</script>
+</body>
+</html>
